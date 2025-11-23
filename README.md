@@ -41,7 +41,7 @@ Add `Loggy` to the dependencies of your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.2.0")
+    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.2.1")
 ]
 ```
 
@@ -180,33 +180,33 @@ Example console output:
 
 ```text
 +--------------------------------------------------------------------------------+
-| Level:  DEBUG                                        Time: 2025-11-23 16:51:05 |
+| Level:  DEBUG                                        Time: 2025-11-23 17:28:10 |
 | Class:  YourClass                                                              |
 | Method: anyMethod()                                                            |
 | Line:   55                                                                     |
 | ------------------------------------------------------------------------------ |
 | [                                                                              |
-|   {                                                                            |
+|   User(                                                                        |
 |     description: "A wise and strategic leader.",                               |
-|     id: "E82ED141-9933-443A-B014-88FF92C79B60",                                |
+|     id: "1DB6CAFD-BC51-46A3-B9C5-8EBB7395DF51",                                |
 |     name: "Alex",                                                              |
 |     role: "Supervisor"                                                         |
-|   },                                                                           |
-|   {                                                                            |
+|   ),                                                                           |
+|   User(                                                                        |
 |     description: "An expert in all things technical.",                         |
-|     id: "3AD5E09B-CABC-47D3-AE00-8EA61B01B2D0",                                |
+|     id: "DBC4B19C-BF8F-4DFD-97F4-181A0B7E7D00",                                |
 |     name: "Jamie",                                                             |
 |     role: "Engineer"                                                           |
-|   },                                                                           |
-|   {                                                                            |
+|   ),                                                                           |
+|   User(                                                                        |
 |     description: "The visionary driving the team forward.The visionary driving |
 |     the team forward.The visionary driving the team forward.The visionary      |
 |     driving the team forward.The visionary driving the team forward.The        |
 |     visionary driving the team forward.",                                      |
-|     id: "1406E2DC-1EC8-4B6F-955E-57249283A349",                                |
+|     id: "074664CB-BB5E-42E5-843C-78A978CA0DBC",                                |
 |     name: "Bob",                                                               |
 |     role: "Director"                                                           |
-|   }                                                                            |
+|   )                                                                            |
 | ]                                                                              |
 +--------------------------------------------------------------------------------+
 ```

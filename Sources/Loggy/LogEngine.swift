@@ -116,13 +116,19 @@ enum LogEngine {
         do {
             let data = try encoder.encode(AnyEncodable(value))
             let json = try JSONSerialization.jsonObject(with: data, options: [])
-            return renderModelStyle(json)
+            let typeName: String? = {
+                if let array = value as? [Any], let first = array.first {
+                    return String(describing: Swift.type(of: first))
+                }
+                return String(describing: Swift.type(of: value))
+            }()
+            return renderModelStyle(json, typeName: typeName)
         } catch {
             return nil
         }
     }
 
-    private static func renderModelStyle(_ value: Any, indentLevel: Int = 0) -> String {
+    private static func renderModelStyle(_ value: Any, indentLevel: Int = 0, typeName: String? = nil) -> String {
         let indentUnit = "  "
         let indent = String(repeating: indentUnit, count: indentLevel)
         let nextIndent = indent + indentUnit
@@ -130,7 +136,7 @@ enum LogEngine {
         switch value {
             case let array as [Any]:
                 let rendered = array.map { element -> String in
-                    renderModelStyle(element, indentLevel: indentLevel + 1)
+                    renderModelStyle(element, indentLevel: indentLevel + 1, typeName: typeName)
                 }.joined(separator: ",\n")
                 return indent + "[\n" + rendered + "\n" + indent + "]"
             
@@ -151,7 +157,9 @@ enum LogEngine {
                     }
                     return composed.joined(separator: "\n")
                 }.joined(separator: ",\n")
-                return indent + "{\n" + rendered + "\n" + indent + "}"
+                let open = typeName.map { "\(indent)\($0)(" } ?? indent + "{"
+                let close = typeName != nil ? indent + ")" : indent + "}"
+                return open + "\n" + rendered + "\n" + close
             
             case let string as String:
                 return "\"\(string)\""
@@ -159,13 +167,6 @@ enum LogEngine {
             default:
                 return String(describing: value)
         }
-    }
-    
-    private static func indentLines(_ text: String, prefix: String) -> String {
-        return text.split(separator: "\n", omittingEmptySubsequences: false)
-            .map(String.init)
-            .map { prefix + $0 }
-            .joined(separator: "\n")
     }
 
     private static func currentTimestamp(timeZone: TimeZone = .current) -> String {
