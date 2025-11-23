@@ -34,13 +34,14 @@ public enum Log {
     /// Log.v("Custom width message", width: .large)
     /// ```
     public static func v(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.v(message, width: width, file: file, function: function, line: line)
+        Loggy.v(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a debug message with formatted table output.
@@ -64,13 +65,14 @@ public enum Log {
     /// Log.d("Response data: \(data)", width: .small)
     /// ```
     public static func d(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.d(message, width: width, file: file, function: function, line: line)
+        Loggy.d(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs an informational message with formatted table output.
@@ -94,13 +96,14 @@ public enum Log {
     /// Log.i("Data sync completed")
     /// ```
     public static func i(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.i(message, width: width, file: file, function: function, line: line)
+        Loggy.i(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a warning message with formatted table output.
@@ -124,13 +127,14 @@ public enum Log {
     /// Log.w("Using deprecated method, please update")
     /// ```
     public static func w(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.w(message, width: width, file: file, function: function, line: line)
+        Loggy.w(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs an error message with formatted table output.
@@ -154,13 +158,14 @@ public enum Log {
     /// Log.e("Database connection failed")
     /// ```
     public static func e(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.e(message, width: width, file: file, function: function, line: line)
+        Loggy.e(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a fatal (What a Terrible Failure) message with formatted table output.
@@ -183,12 +188,13 @@ public enum Log {
     /// Log.wtf("Invalid state detected: \(state)")
     /// ```
     public static func wtf(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Loggy.wtf(message, width: width, file: file, function: function, line: line)
+        Loggy.wtf(message, format: format, width: width, file: file, function: function, line: line)
     }
 }
