@@ -12,4 +12,6 @@ public enum LogFormat {
     case plain
     /// Attempt to pretty-print any `Codable` payload with 2-space indentation.
     case codable
+    /// Pretty-print JSON (Codable values or JSON strings) with 2-space indentation.
+    case json
 }
