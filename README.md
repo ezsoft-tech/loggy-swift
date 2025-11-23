@@ -17,6 +17,7 @@ It focuses on readability during development by combining:
 - ✅ Simple API: `Loggy.d("message")` or `Log.d("message")`
 - ✅ Table-style output in Xcode console (Level / Time / File / Function / Line / Body)
 - ✅ Optional instance helpers via `Loggable`
+- ✅ Pretty formatting for `Codable` payloads via `format: .codable` (model-style with indentation)
 - ✅ No external dependencies, pure Swift
 
 ---
@@ -40,7 +41,7 @@ Add `Loggy` to the dependencies of your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.1.0")
+    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.2.0")
 ]
 ```
 
@@ -80,14 +81,14 @@ class YourClass {
 Example console output (illustrative):
 
 ```text
-+----------------------------------------------------------------------------------------+
-| Level:  DEBUG                                                Time: 2025-11-22 22:22:26 |
-| Class:  YourClass                                                                      |
-| Method: anyMethod()                                                                    |
-| Line:   36                                                                             |
-| -------------------------------------------------------------------------------------- |
-| Debug message from Loggy                                                               |
-+----------------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------+
+| Level:  DEBUG                                        Time: 2025-11-22 22:22:26 |
+| Class:  YourClass                                                              |
+| Method: anyMethod()                                                            |
+| Line:   36                                                                     |
+| ------------------------------------------------------------------------------ |
+| Debug message from Loggy.                                                      |
++--------------------------------------------------------------------------------+
 ```
 
 ---
@@ -133,6 +134,10 @@ Loggy.i("Info message")
 Loggy.w("Warning message")
 Loggy.e("Error message")
 Loggy.wtf("Fatal / unexpected message")
+
+// Optional: pretty-print Codable payloads (model-style, quoted strings)
+Loggy.d(someCodableModel, format: .codable)
+Loggy.d("UserListViewModel -> Fetched new users: \(users)", format: .codable)
 ```
 
 ### Sugar Facade: `Log`
@@ -154,6 +159,58 @@ All of these delegate to the corresponding `Loggy` methods.
 
 `Loggable` is an opt-in marker that unlocks the instance helpers (`logD`, `logI`, etc.). Adopting it is as easy as declaring conformance on your class or struct—no additional requirements.
 
+### Formatting Options
+
+- `format: .plain` (default): renders the message as-is, wrapping long lines to the configured width.
+- `format: .codable`: pretty-prints `Codable` values (or interpolated strings containing them) in a Swift-like model layout with two-space indentation and quoted strings.
+
+```swift
+import Loggy
+
+class YourClass {
+
+    func anyMethod() {
+        // Log a list with the type of Codable model `User`
+        Loggy.d(users, format: .codable)
+    }
+}
+```
+
+Example console output:
+
+```text
++--------------------------------------------------------------------------------+
+| Level:  DEBUG                                        Time: 2025-11-23 16:51:05 |
+| Class:  YourClass                                                              |
+| Method: anyMethod()                                                            |
+| Line:   55                                                                     |
+| ------------------------------------------------------------------------------ |
+| [                                                                              |
+|   {                                                                            |
+|     description: "A wise and strategic leader.",                               |
+|     id: "E82ED141-9933-443A-B014-88FF92C79B60",                                |
+|     name: "Alex",                                                              |
+|     role: "Supervisor"                                                         |
+|   },                                                                           |
+|   {                                                                            |
+|     description: "An expert in all things technical.",                         |
+|     id: "3AD5E09B-CABC-47D3-AE00-8EA61B01B2D0",                                |
+|     name: "Jamie",                                                             |
+|     role: "Engineer"                                                           |
+|   },                                                                           |
+|   {                                                                            |
+|     description: "The visionary driving the team forward.The visionary driving |
+|     the team forward.The visionary driving the team forward.The visionary      |
+|     driving the team forward.The visionary driving the team forward.The        |
+|     visionary driving the team forward.",                                      |
+|     id: "1406E2DC-1EC8-4B6F-955E-57249283A349",                                |
+|     name: "Bob",                                                               |
+|     role: "Director"                                                           |
+|   }                                                                            |
+| ]                                                                              |
++--------------------------------------------------------------------------------+
+```
+
 ---
 
 ## Roadmap
@@ -164,7 +221,7 @@ Planned enhancements (subject to change):
 - 🎛 Configurable columns, alignment, and truncation options
 - 🌈 Optional color / highlighting support in the console (where available)
 - 🔌 Pluggable sinks (e.g. OSLog, remote endpoints)
-- 🧩 More advanced Codable / JSON tree rendering
+- 🧩 More advanced JSON tree rendering
 
 If you are interested in these features, feel free to open an issue or contribute.
 
