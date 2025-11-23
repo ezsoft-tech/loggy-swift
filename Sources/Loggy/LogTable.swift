@@ -54,9 +54,11 @@ struct LogTable {
                 messageLines = wrapText(message, maxWidth: baseInnerWidth)
                 messageMax = baseInnerWidth
             case .codable:
+                // Preserve pretty formatting but wrap any long lines to the requested width, keeping indentation.
                 let lines = splitMessageLines(message)
-                messageLines = lines
-                messageMax = lines.map { displayWidth(of: $0) }.max() ?? 0
+                let wrapped = lines.flatMap { wrapPreservingIndentation($0, maxWidth: baseInnerWidth) }
+                messageLines = wrapped
+                messageMax = wrapped.map { displayWidth(of: $0) }.max() ?? baseInnerWidth
         }
         
         var innerWidth = max(baseInnerWidth, messageMax)
@@ -149,6 +151,16 @@ struct LogTable {
         }
         
         return lines.isEmpty ? [""] : lines
+    }
+    
+    private static func wrapPreservingIndentation(_ text: String, maxWidth: Int) -> [String] {
+        guard maxWidth > 0 else { return [text] }
+        let indentPrefix = text.prefix { $0 == " " }
+        let indentWidth = displayWidth(of: String(indentPrefix))
+        let availableWidth = max(1, maxWidth - indentWidth)
+        let trimmed = text.dropFirst(indentPrefix.count)
+        let wrapped = wrapText(String(trimmed), maxWidth: availableWidth)
+        return wrapped.map { indentPrefix + $0 }
     }
     
     private static func paddingEnd(_ text: String, width: Int) -> String {
