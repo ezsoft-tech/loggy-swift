@@ -53,7 +53,7 @@ struct LogTable {
             case .plain:
                 messageLines = wrapText(message, maxWidth: baseInnerWidth)
                 messageMax = baseInnerWidth
-            case .codable:
+            case .codable, .json:
                 // Preserve pretty formatting but wrap any long lines to the requested width, keeping indentation.
                 let lines = splitMessageLines(message)
                 let wrapped = lines.flatMap { wrapPreservingIndentation($0, maxWidth: baseInnerWidth) }
