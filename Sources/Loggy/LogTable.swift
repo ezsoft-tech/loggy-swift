@@ -33,6 +33,7 @@ struct LogTable {
     
     static func render(
         message: String,
+        format: LogFormat,
         level: LogLevel,
         className: String,
         function: String,
@@ -40,49 +41,61 @@ struct LogTable {
         timestamp: String,
         width: TableWidth
     ) -> String {
-        let tableWidth = width.value
-        let colorCode = level.colorCode
-        let colorOpen = colorCode.open
-        let colorClose = colorCode.close
-        
-        let separator = String(repeating: "-", count: tableWidth)
-        let topBorder = "+" + separator + "+"
-        let bottomBorder = topBorder
-        
+        let baseInnerWidth = max(0, width.value - 2)
         let labelWidth = 8
-        let innerWidth = tableWidth - 2
-        
         let levelLabel = "Level:"
         let levelValue = level.symbol
         let timeText = "Time: \(timestamp)"
         
-        let availableSpace = max(
-            1,
-            innerWidth - labelWidth - displayWidth(of: levelValue) - displayWidth(of: timeText)
-        )
-        let headerLine = paddingEnd(levelLabel, width: labelWidth) + levelValue + String(repeating: " ", count: availableSpace) + timeText
+        let messageLines: [String]
+        let messageMax: Int
+        switch format {
+            case .plain:
+                messageLines = wrapText(message, maxWidth: baseInnerWidth)
+                messageMax = baseInnerWidth
+            case .codable:
+                // Preserve pretty formatting but wrap any long lines to the requested width, keeping indentation.
+                let lines = splitMessageLines(message)
+                let wrapped = lines.flatMap { wrapPreservingIndentation($0, maxWidth: baseInnerWidth) }
+                messageLines = wrapped
+                messageMax = wrapped.map { displayWidth(of: $0) }.max() ?? baseInnerWidth
+        }
         
-        let classLine = paddingEnd("Class:", width: labelWidth) + className
-        let methodLine = paddingEnd("Method:", width: labelWidth) + function
-        let lineLine = paddingEnd("Line:", width: labelWidth) + "\(line)"
+        var innerWidth = max(baseInnerWidth, messageMax)
         
-        let messageLines = wrapText(message, maxWidth: innerWidth)
+        func buildHeaderLines(using inner: Int) -> (String, String, String, String) {
+            let availableSpace = max(
+                1,
+                inner - labelWidth - displayWidth(of: levelValue) - displayWidth(of: timeText)
+            )
+            let headerLine = paddingEnd(levelLabel, width: labelWidth) + levelValue + String(repeating: " ", count: availableSpace) + timeText
+            let classLine = paddingEnd("Class:", width: labelWidth) + className
+            let methodLine = paddingEnd("Method:", width: labelWidth) + function
+            let lineLine = paddingEnd("Line:", width: labelWidth) + "\(line)"
+            return (headerLine, classLine, methodLine, lineLine)
+        }
         
+        var (headerLine, classLine, methodLine, lineLine) = buildHeaderLines(using: innerWidth)
+        let headerMax = max(displayWidth(of: headerLine), displayWidth(of: classLine), displayWidth(of: methodLine), displayWidth(of: lineLine))
+        innerWidth = max(innerWidth, headerMax)
+        (headerLine, classLine, methodLine, lineLine) = buildHeaderLines(using: innerWidth)
+        
+        let tableWidth = innerWidth + 2
+        let separator = String(repeating: "-", count: tableWidth)
+        let topBorder = "+" + separator + "+"
+        let bottomBorder = topBorder
+        let dividerLine = String(repeating: "-", count: innerWidth)
+        
+        let colorCode = level.colorCode
         var table = ""
-        table += colorOpen
+        table += colorCode.open
         table += topBorder
         table += "\n"
         
-        let headerPadded = paddingEnd(headerLine, width: innerWidth)
-        let classPadded = paddingEnd(classLine, width: innerWidth)
-        let methodPadded = paddingEnd(methodLine, width: innerWidth)
-        let linePadded = paddingEnd(lineLine, width: innerWidth)
-        let dividerLine = String(repeating: "-", count: innerWidth)
-        
-        table += "| \(headerPadded) |\n"
-        table += "| \(classPadded) |\n"
-        table += "| \(methodPadded) |\n"
-        table += "| \(linePadded) |\n"
+        table += "| \(paddingEnd(headerLine, width: innerWidth)) |\n"
+        table += "| \(paddingEnd(classLine, width: innerWidth)) |\n"
+        table += "| \(paddingEnd(methodLine, width: innerWidth)) |\n"
+        table += "| \(paddingEnd(lineLine, width: innerWidth)) |\n"
         table += "| \(dividerLine) |\n"
         
         for messageLine in messageLines {
@@ -91,37 +104,39 @@ struct LogTable {
         }
         
         table += bottomBorder
-        table += colorClose
+        table += colorCode.close
         table += "\n"
         
         return table
     }
     
+    private static func splitMessageLines(_ text: String) -> [String] {
+        let rawLines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        return rawLines.isEmpty ? [""] : rawLines
+    }
+    
     private static func wrapText(_ text: String, maxWidth: Int) -> [String] {
-        guard maxWidth > 0 else { return [""] }
+        guard maxWidth > 0 else { return [text] }
         var lines: [String] = []
         let words = text.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
-        var currentLine: String = ""
-        
+        var currentLine = ""
         for word in words {
             let candidate = currentLine.isEmpty ? word : currentLine + " " + word
-            
             if displayWidth(of: candidate) <= maxWidth {
                 currentLine = candidate
             } else {
                 if !currentLine.isEmpty {
                     lines.append(currentLine)
                 }
-                
                 if displayWidth(of: word) > maxWidth {
                     var buffer = ""
-                    for character in word {
-                        let charString = String(character)
-                        if displayWidth(of: buffer + charString) > maxWidth, !buffer.isEmpty {
+                    for ch in word {
+                        let s = String(ch)
+                        if displayWidth(of: buffer + s) > maxWidth, !buffer.isEmpty {
                             lines.append(buffer)
-                            buffer = charString
+                            buffer = s
                         } else {
-                            buffer += charString
+                            buffer += s
                         }
                     }
                     currentLine = buffer
@@ -136,6 +151,16 @@ struct LogTable {
         }
         
         return lines.isEmpty ? [""] : lines
+    }
+    
+    private static func wrapPreservingIndentation(_ text: String, maxWidth: Int) -> [String] {
+        guard maxWidth > 0 else { return [text] }
+        let indentPrefix = text.prefix { $0 == " " }
+        let indentWidth = displayWidth(of: String(indentPrefix))
+        let availableWidth = max(1, maxWidth - indentWidth)
+        let trimmed = text.dropFirst(indentPrefix.count)
+        let wrapped = wrapText(String(trimmed), maxWidth: availableWidth)
+        return wrapped.map { indentPrefix + $0 }
     }
     
     private static func paddingEnd(_ text: String, width: Int) -> String {

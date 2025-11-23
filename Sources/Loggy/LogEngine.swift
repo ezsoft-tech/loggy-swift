@@ -14,7 +14,8 @@ import Foundation
 enum LogEngine {
     
     static func log(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat,
         level: LogLevel,
         width: TableWidth,
         file: String,
@@ -24,9 +25,11 @@ enum LogEngine {
         #if DEBUG
         let className = extractClassName(from: file)
         let timestamp = currentTimestamp()
+        let body = formatMessage(message, format: format)
         
         let formattedTable = LogTable.render(
-            message: message,
+            message: body,
+            format: format,
             level: level,
             className: className,
             function: function,
@@ -44,6 +47,127 @@ enum LogEngine {
         return (filename as NSString).deletingPathExtension
     }
     
+    private static func formatMessage(_ message: Any, format: LogFormat) -> String {
+        switch format {
+            case .plain:
+                return String(describing: message)
+            
+            case .codable:
+                if let string = message as? String {
+                    return prettyDescription(string)
+                }
+            
+                if let pretty = prettyModel(message) {
+                    return pretty
+                }
+            
+                return prettyDescription(String(describing: message))
+        }
+    }
+
+    /// Attempts to add line breaks and two-space indentation to Swift-style descriptions.
+    private static func prettyDescription(_ text: String) -> String {
+        var result = ""
+        var indent = 0
+        let characters = Array(text)
+        var index = 0
+        
+        func indentation() -> String { String(repeating: "  ", count: max(indent, 0)) }
+        
+        while index < characters.count {
+            let ch = characters[index]
+            
+            switch ch {
+                case "[", "(":
+                    result.append(ch)
+                    indent += 1
+                    result.append("\n")
+                    result.append(indentation())
+                
+                case ",":
+                    result.append(",")
+                    if index + 1 < characters.count && characters[index + 1] == " " {
+                        index += 1
+                    }
+                    result.append("\n")
+                    result.append(indentation())
+                
+                case "]", ")":
+                    indent = max(0, indent - 1)
+                    result.append("\n")
+                    result.append(indentation())
+                    result.append(ch)
+                
+                default:
+                    result.append(ch)
+            }
+            
+            index += 1
+        }
+        
+        return result
+    }
+    
+    private static func prettyModel(_ value: Any) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        
+        do {
+            let data = try encoder.encode(AnyEncodable(value))
+            let json = try JSONSerialization.jsonObject(with: data, options: [])
+            return renderModelStyle(json)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func renderModelStyle(_ value: Any, indentLevel: Int = 0) -> String {
+        let indentUnit = "  "
+        let indent = String(repeating: indentUnit, count: indentLevel)
+        let nextIndent = indent + indentUnit
+        
+        switch value {
+            case let array as [Any]:
+                let rendered = array.map { element -> String in
+                    renderModelStyle(element, indentLevel: indentLevel + 1)
+                }.joined(separator: ",\n")
+                return indent + "[\n" + rendered + "\n" + indent + "]"
+            
+            case let dict as [String: Any]:
+                let sortedKeys = dict.keys.sorted()
+                let rendered = sortedKeys.map { key in
+                    let v = dict[key]!
+                    let valueString = renderModelStyle(v, indentLevel: indentLevel + 1)
+                    let valueLines = valueString.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+                    var composed: [String] = []
+                    if let first = valueLines.first {
+                        composed.append("\(nextIndent)\(key): \(first)")
+                    }
+                    if valueLines.count > 1 {
+                        for extra in valueLines.dropFirst() {
+                            composed.append(nextIndent + extra)
+                        }
+                    }
+                    return composed.joined(separator: "\n")
+                }.joined(separator: ",\n")
+                return indent + "{\n" + rendered + "\n" + indent + "}"
+            
+            case let string as String:
+                return "\"\(string)\""
+            
+            default:
+                return String(describing: value)
+        }
+    }
+    
+    private static func indentLines(_ text: String, prefix: String) -> String {
+        return text.split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+            .map { prefix + $0 }
+            .joined(separator: "\n")
+    }
+
     private static func currentTimestamp(timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"

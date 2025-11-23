@@ -49,13 +49,14 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logV(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.v(message, width: width, file: file, function: function, line: line)
+        Log.v(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a debug message from within a `Loggable` type.
@@ -67,13 +68,14 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logD(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.d(message, width: width, file: file, function: function, line: line)
+        Log.d(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs an informational message from within a `Loggable` type.
@@ -85,13 +87,14 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logI(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.i(message, width: width, file: file, function: function, line: line)
+        Log.i(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a warning message from within a `Loggable` type.
@@ -103,13 +106,14 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logW(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.w(message, width: width, file: file, function: function, line: line)
+        Log.w(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs an error message from within a `Loggable` type.
@@ -121,13 +125,14 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logE(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.e(message, width: width, file: file, function: function, line: line)
+        Log.e(message, format: format, width: width, file: file, function: function, line: line)
     }
     
     /// Logs a fatal (What a Terrible Failure) message from within a `Loggable` type.
@@ -139,12 +144,13 @@ public extension Loggable {
     ///   - function: The function where the log is called (automatically captured)
     ///   - line: The line number where the log is called (automatically captured)
     func logWTF(
-        _ message: String,
+        _ message: Any,
+        format: LogFormat = .plain,
         width: TableWidth = .medium,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
-        Log.wtf(message, width: width, file: file, function: function, line: line)
+        Log.wtf(message, format: format, width: width, file: file, function: function, line: line)
     }
 }

@@ -11,37 +11,53 @@
 import Foundation
 import Loggy
 
-private struct User {
-    let id: Int
+// Example model that conforms to Codable, used to demonstrate pretty-printing.
+private struct User: Codable {
+    let id: UUID
     let name: String
     let role: String
+    let description: String
 }
 
-private func runMockScenario() {
-    let users = [
-        User(id: 101, name: "Alice", role: "Engineer"),
-        User(id: 102, name: "Bob", role: "Designer"),
-        User(id: 103, name: "Charlie", role: "PM")
+// MARK: - Example Runs
+
+/// Shows each severity level with concise, plain-text messages.
+private func runBasicLevels() {
+    print("\n--- Basic severity logs ---")
+    
+    Loggy.v("Verbose: initializing mock sync")
+    Loggy.d("Debug: fetched configuration")
+    Loggy.i("Info: sync completed successfully")
+    Loggy.w("Warning: pagination token missing, retrying first page")
+    Loggy.e("Error: failed to persist cache entry", width: .small)
+    Loggy.wtf("Fatal: unrecoverable corruption detected")
+    
+    Log.d("Sugar: shorthand log via Log facade")
+}
+
+/// Demonstrates pretty-printing of Codable payloads using `format: .codable`.
+private func runCodableExample() {
+    print("\n--- Codable pretty-print ---")
+    let users: [User] = [
+        .init(id: UUID(), name: "Alex", role: "Supervisor", description: "A wise and strategic leader."),
+        .init(id: UUID(), name: "Jamie", role: "Engineer", description: "An expert in all things technical."),
+        .init(id: UUID(), name: "Bob", role: "Director", description: "The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward."),
     ]
     
-    Loggy.v("Starting mock sync at \(Date())")
-    Loggy.d("Fetched \(users.count) users from mock service", width: .large)
+    // Without format: .codable this would be a single long line; .codable indents with two spaces.
+    Loggy.d("UserListViewModel -> Fetched new users: \(users)")
     
-    for user in users {
-        Loggy.i("User \(user.id): \(user.name) (\(user.role))")
-    }
+    Loggy.d(
+        "UserListViewModel -> Fetched new users: \(users)",
+        format: .codable
+    )
     
-    Loggy.w("Pagination token missing, will refetch the first page")
-    Loggy.e("Failed to persist user \(users[2].name)", width: .small)
-    Loggy.wtf("Simulated fatal corruption in cache index")
-    
-    // Demonstrate sugar API as well
-    Log.d("Shortcut log for \(users[0].name)")
-    
-    Loggy.d("Debug message from Loggy")
+    Loggy.d(users, format: .codable)
 }
 
+// MARK: - Entry Point
+
 print("=== Loggy Example ===")
-print("Running mock scenario…")
-runMockScenario()
-print("\nInspect the console above for table-style output.")
+runBasicLevels()
+runCodableExample()
+print("\nInspect the console above for table-style output, including the pretty-printed Codable example.")
