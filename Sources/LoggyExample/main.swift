@@ -19,6 +19,14 @@ private struct User: Codable {
     let description: String
 }
 
+private extension User {
+    static let mocks: [User] = [
+        .init(id: UUID(), name: "Alex", role: "Supervisor", description: "A wise and strategic leader."),
+        .init(id: UUID(), name: "Jamie", role: "Engineer", description: "An expert in all things technical."),
+        .init(id: UUID(), name: "Bob", role: "Director", description: "This is will be a very long description about Bob, to test the wrapping logic. It should definitely wrap and continue to the next line. And then some more text to really push it over the edge. Who knows, maybe it will even wrap into a new line and a new line and a new line!")
+    ]
+}
+
 // MARK: - Example Runs
 
 /// Shows each severity level with concise, plain-text messages.
@@ -38,11 +46,7 @@ private func runBasicLevels() {
 /// Demonstrates pretty-printing of Codable payloads using `format: .codable`.
 private func runCodableExample() {
     print("\n--- Codable pretty-print ---")
-    let users: [User] = [
-        .init(id: UUID(), name: "Alex", role: "Supervisor", description: "A wise and strategic leader."),
-        .init(id: UUID(), name: "Jamie", role: "Engineer", description: "An expert in all things technical."),
-        .init(id: UUID(), name: "Bob", role: "Director", description: "The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward.The visionary driving the team forward."),
-    ]
+    let users = User.mocks
     
     // Without format: .codable this would be a single long line; .codable indents with two spaces.
     Loggy.d("UserListViewModel -> Fetched new users: \(users)")
@@ -55,9 +59,52 @@ private func runCodableExample() {
     Loggy.d(users, format: .codable)
 }
 
+/// Demonstrates pretty-printing of JSON strings using `format: .json`.
+private func runJSONExample() {
+    print("\n--- JSON pretty-print ---")
+    let users = User.mocks
+
+    // Using .json format to pretty-print JSON strings.
+    let jsonString = """
+    {
+        "status": "success",
+        "data": {
+            "users": [
+                {
+                    "id": "\(users[0].id)",
+                    "name": "\(users[0].name)",
+                    "role": "\(users[0].role)",
+                    "description": "\(users[0].description)"
+                },
+                {
+                    "id": "\(users[1].id)",
+                    "name": "\(users[1].name)",
+                    "role": "\(users[1].role)",
+                    "description": "\(users[1].description)"
+                },
+                {
+                    "id": "\(users[2].id)",
+                    "name": "\(users[2].name)",
+                    "role": "\(users[2].role)",
+                    "description": "\(users[2].description)"
+                }
+            ]
+        }
+    }
+    """
+
+    Loggy.i(
+        "Received API response: \(jsonString)",
+        format: .json
+    )
+
+    Loggy.i(jsonString, format: .json)
+}
+
 // MARK: - Entry Point
 
 print("=== Loggy Example ===")
 runBasicLevels()
 runCodableExample()
+runJSONExample()
 print("\nInspect the console above for table-style output, including the pretty-printed Codable example.")

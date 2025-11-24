@@ -18,6 +18,7 @@ It focuses on readability during development by combining:
 - ✅ Table-style output in Xcode console (Level / Time / File / Function / Line / Body)
 - ✅ Optional instance helpers via `Loggable`
 - ✅ Pretty formatting for `Codable` payloads via `format: .codable` (model-style with indentation)
+- ✅ Pretty JSON output via `format: .json` (works with JSON strings or Codable values)
 - ✅ No external dependencies, pure Swift
 
 ---
@@ -41,7 +42,7 @@ Add `Loggy` to the dependencies of your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.2.1")
+    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.3.0")
 ]
 ```
 
@@ -138,6 +139,10 @@ Loggy.wtf("Fatal / unexpected message")
 // Optional: pretty-print Codable payloads (model-style, quoted strings)
 Loggy.d(someCodableModel, format: .codable)
 Loggy.d("UserListViewModel -> Fetched new users: \(users)", format: .codable)
+
+// Optional: pretty-print JSON payloads (raw JSON strings or Codable values)
+Loggy.i(jsonString, format: .json)
+Loggy.i("Received API response: \(jsonString)", format: .json)
 ```
 
 ### Sugar Facade: `Log`
@@ -163,6 +168,9 @@ All of these delegate to the corresponding `Loggy` methods.
 
 - `format: .plain` (default): renders the message as-is, wrapping long lines to the configured width.
 - `format: .codable`: pretty-prints `Codable` values (or interpolated strings containing them) in a Swift-like model layout with two-space indentation and quoted strings.
+- `format: .json`: pretty-prints JSON strings or encodable values as canonical JSON with two-space indentation.
+
+#### Output `.codable` format:
 
 ```swift
 import Loggy
@@ -176,7 +184,7 @@ class YourClass {
 }
 ```
 
-Example console output:
+Example console output (`format: .codable`):
 
 ```text
 +--------------------------------------------------------------------------------+
@@ -188,13 +196,13 @@ Example console output:
 | [                                                                              |
 |   User(                                                                        |
 |     description: "A wise and strategic leader.",                               |
-|     id: "1DB6CAFD-BC51-46A3-B9C5-8EBB7395DF51",                                |
+|     id: 1DB6CAFD-BC51-46A3-B9C5-8EBB7395DF51,                                  |
 |     name: "Alex",                                                              |
 |     role: "Supervisor"                                                         |
 |   ),                                                                           |
 |   User(                                                                        |
 |     description: "An expert in all things technical.",                         |
-|     id: "DBC4B19C-BF8F-4DFD-97F4-181A0B7E7D00",                                |
+|     id: DBC4B19C-BF8F-4DFD-97F4-181A0B7E7D00,                                  |
 |     name: "Jamie",                                                             |
 |     role: "Engineer"                                                           |
 |   ),                                                                           |
@@ -211,6 +219,62 @@ Example console output:
 +--------------------------------------------------------------------------------+
 ```
 
+#### Output `.json` format:
+
+```swift
+import Loggy
+
+class YourClass {
+
+    func anyMethod() {
+        // Log a JSON string with pretty format
+        Loggy.i("Received API response: \(jsonString)", format: .json)
+    }
+}
+```
+
+Example console output (`format: .json`):
+
+```text
++--------------------------------------------------------------------------------+
+| Level:  INFO                                         Time: 2025-11-23 18:59:23 |
+| Class:  main                                                                   |
+| Method: runJSONExample()                                                       |
+| Line:   96                                                                     |
+| ------------------------------------------------------------------------------ |
+| Received API response:                                                         |
+| {                                                                              |
+|   "data" : {                                                                   |
+|     "users" : [                                                                |
+|       {                                                                        |
+|         "description" : "A wise and strategic leader.",                        |
+|         "id" : "AA97A172-EC9D-4B9C-94E1-0740E47524A0",                         |
+|         "name" : "Alex",                                                       |
+|         "role" : "Supervisor"                                                  |
+|       },                                                                       |
+|       {                                                                        |
+|         "description" : "An expert in all things technical.",                  |
+|         "id" : "8D3CF9E7-B80B-4126-9F05-3F489E2296EC",                         |
+|         "name" : "Jamie",                                                      |
+|         "role" : "Engineer"                                                    |
+|       },                                                                       |
+|       {                                                                        |
+|         "description" : "This is will be a very long description about Bob, to |
+|         test the wrapping logic. It should definitely wrap and continue to the |
+|         next line. And then some more text to really push it over the edge.    |
+|         Who knows, maybe it will even wrap into a new line and a new line and  |
+|         a new line!",                                                          |
+|         "id" : "E3D96A07-E612-4F23-9FFC-DCB30D2835AA",                         |
+|         "name" : "Bob",                                                        |
+|         "role" : "Director"                                                    |
+|       }                                                                        |
+|     ]                                                                          |
+|   },                                                                           |
+|   "status" : "success"                                                         |
+| }                                                                              |
++--------------------------------------------------------------------------------+
+```
+
 ---
 
 ## Roadmap
@@ -219,9 +283,7 @@ Planned enhancements (subject to change):
 
 - 📄 File output with table-style framing/borders
 - 🎛 Configurable columns, alignment, and truncation options
-- 🌈 Optional color / highlighting support in the console (where available)
 - 🔌 Pluggable sinks (e.g. OSLog, remote endpoints)
-- 🧩 More advanced JSON tree rendering
 
 If you are interested in these features, feel free to open an issue or contribute.
 

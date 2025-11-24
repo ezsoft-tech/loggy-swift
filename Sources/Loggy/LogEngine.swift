@@ -13,6 +13,15 @@ import Foundation
 /// Internal helper that does the heavy lifting for all log statements.
 enum LogEngine {
     
+    /// Formats a message and renders the log table when DEBUG is enabled.
+    /// - Parameters:
+    ///   - message: Payload to log (String, Codable, JSON, etc.).
+    ///   - format: Rendering format (`plain`, `codable`, or `json`).
+    ///   - level: Log severity level.
+    ///   - width: Desired table width.
+    ///   - file: Caller file path.
+    ///   - function: Caller function name.
+    ///   - line: Caller line number.
     static func log(
         _ message: Any,
         format: LogFormat,
@@ -42,11 +51,13 @@ enum LogEngine {
         #endif
     }
     
+    /// Extracts the filename (sans extension) from a file path.
     private static func extractClassName(from file: String) -> String {
         let filename = (file as NSString).lastPathComponent
         return (filename as NSString).deletingPathExtension
     }
     
+    /// Formats the message body according to the selected `LogFormat`.
     private static func formatMessage(_ message: Any, format: LogFormat) -> String {
         switch format {
             case .plain:
@@ -57,15 +68,22 @@ enum LogEngine {
                     return prettyDescription(string)
                 }
             
-                if let pretty = prettyModel(message) {
+                if let pretty = prettyModel(from: message) {
                     return pretty
                 }
             
                 return prettyDescription(String(describing: message))
+            
+            case .json:
+                if let json = prettyJSON(from: message) {
+                    return json
+                }
+
+                return prettyDescription(String(describing: message))
         }
     }
 
-    /// Attempts to add line breaks and two-space indentation to Swift-style descriptions.
+    /// Adds line breaks and two-space indentation to Swift-style descriptions.
     private static func prettyDescription(_ text: String) -> String {
         var result = ""
         var indent = 0
@@ -108,7 +126,8 @@ enum LogEngine {
         return result
     }
     
-    private static func prettyModel(_ value: Any) -> String? {
+    /// Encodes arbitrary values to JSON and renders them as a Swift-style model.
+    private static func prettyModel(from value: Any) -> String? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
@@ -128,6 +147,7 @@ enum LogEngine {
         }
     }
 
+    /// Renders JSON objects/arrays into a Swift-like model string with indentation.
     private static func renderModelStyle(_ value: Any, indentLevel: Int = 0, typeName: String? = nil) -> String {
         let indentUnit = "  "
         let indent = String(repeating: indentUnit, count: indentLevel)
@@ -169,6 +189,47 @@ enum LogEngine {
         }
     }
 
+    /// Pretty-prints JSON from strings or Encodable values.
+    private static func prettyJSON(from value: Any) -> String? {
+        if let string = value as? String,
+           let pretty = prettyJSONString(string) { return pretty }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+
+        if let data = try? encoder.encode(AnyEncodable(value)),
+           let pretty = prettyJSONData(data) { return pretty }
+
+        return nil
+    }
+
+    /// Pretty-prints a raw JSON string, preserving any text before the JSON starts.
+    private static func prettyJSONString(_ text: String) -> String? {
+        guard let idx = text.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
+
+        let prefix = text[..<idx]
+        let jsonPortion = text[idx...]
+
+        guard let data = String(jsonPortion).data(using: .utf8),
+              let pretty = prettyJSONData(data) else { return nil }
+
+        if prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return pretty }
+
+        return prefix + "\n" + pretty
+    }
+
+    /// Pretty-prints raw JSON data if it represents a valid JSON object/array.
+    private static func prettyJSONData(_ data: Data) -> String? {
+        guard let obj = try? JSONSerialization.jsonObject(with: data, options: []),
+            JSONSerialization.isValidJSONObject(obj),
+            let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys])
+        else { return nil }
+
+        return String(decoding: prettyData, as: UTF8.self)
+    }
+
+    /// Returns a timestamp string for the current date/time in the given time zone.
     private static func currentTimestamp(timeZone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
