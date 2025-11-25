@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import SwiftUI
 import Loggy
 
 // Example model that conforms to Codable, used to demonstrate pretty-printing.
@@ -101,10 +102,63 @@ private func runJSONExample() {
     Loggy.i(jsonString, format: .json)
 }
 
+// MARK: - SwiftUI Example
+
+/// Simple SwiftUI view that conforms to `Loggable` so it can use the `.log` modifier.
+private struct ProfileCard: View, Loggable {
+    let name: String
+    let title: String
+    let isOnline: Bool
+    let favoriteQuote: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(name).font(.headline)
+            Text(title).font(.subheadline)
+            Text(isOnline ? "Online" : "Offline").font(.footnote)
+            
+            if let favoriteQuote {
+                Text("“\(favoriteQuote)”")
+                    .italic()
+                    .font(.caption)
+                    .foregroundColor(Color(.gray))
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color(.gray).opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+/// Demonstrates logging SwiftUI view initialization with the `.log` modifier.
+@MainActor
+private func runSwiftUIExample() {
+    print("\n--- SwiftUI view logging with .log ---")
+    
+    _ = ProfileCard(
+        name: "Taylor",
+        title: "iOS Engineer",
+        isOnline: true,
+        favoriteQuote: "Shipping beats perfection."
+    )
+    .log(.debug) // Logs type name, init signature, and parameter values
+    
+    _ = ProfileCard(
+        name: "Jordan",
+        title: "Product Manager",
+        isOnline: false,
+        favoriteQuote: nil
+    )
+    .log(.info, "Rendering profile card with custom message")
+}
+
 // MARK: - Entry Point
 
 print("=== Loggy Example ===")
 runBasicLevels()
 runCodableExample()
 runJSONExample()
-print("\nInspect the console above for table-style output, including the pretty-printed Codable example.")
+runSwiftUIExample()
+print("\nInspect the console above for table-style output, including the pretty-printed Codable example and SwiftUI .log modifier output.")
