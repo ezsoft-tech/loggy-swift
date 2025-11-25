@@ -7,7 +7,7 @@ Loggy is a lightweight logging utility for Swift that renders rich, structured l
 It focuses on readability during development by combining:
 
 - Table-style output (level, time, file, function, line, body)
-- Short-hand APIs (`Log`) plus optional instance helpers via a `Loggable` protocol
+- Short-hand APIs (`Log`) plus SwiftUI `.log` view modifier via a `Loggable` protocol
 - No external dependencies and a single entry point
 
 ---
@@ -16,7 +16,7 @@ It focuses on readability during development by combining:
 
 - ✅ Simple API: `Loggy.d("message")` or `Log.d("message")`
 - ✅ Table-style output in Xcode console (Level / Time / File / Function / Line / Body)
-- ✅ Optional instance helpers via `Loggable`
+- ✅ SwiftUI view logging via `.log` on any `Loggable` view
 - ✅ Pretty formatting for `Codable` payloads via `format: .codable` (model-style with indentation)
 - ✅ Pretty JSON output via `format: .json` (works with JSON strings or Codable values)
 - ✅ No external dependencies, pure Swift
@@ -42,7 +42,7 @@ Add `Loggy` to the dependencies of your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.3.0")
+    .package(url: "https://github.com/ezsoft-tech/loggy-swift.git", from: "0.4.0")
 ]
 ```
 
@@ -94,97 +94,20 @@ Example console output (illustrative):
 
 ---
 
-### 2. Instance Logging via `Loggable`
+### 2. Enhanced Logging (format options)
 
-If your type conforms to `Loggable`, you automatically gain instance helpers that forward to the global API while preserving file/function context:
-
-```swift
-import Loggy
-
-final class SignInViewModel: Loggable {
-    func signIn() {
-        logI("Submitting credentials…")
-        // ...
-        logE("Server rejected request")
-    }
-}
-```
-
----
-
-### 3. Run the Example App
-
-Want to see the tables in action quickly? Run the bundled example target:
-
-```bash
-swift run LoggyExample
-```
-
-This prints a series of mock log entries (using both `Loggy.*` and `Log.*`) so you can verify the console layout inside your terminal or Xcode console.
-
----
-
-## API Overview
-
-### Core Entry Point: `Loggy`
+Add `format: .codable` to pretty-print Codable payloads in a model-style layout, or `format: .json` to pretty-print JSON strings/encodables.
 
 ```swift
-Loggy.v("Verbose message")
-Loggy.d("Debug message")
-Loggy.i("Info message")
-Loggy.w("Warning message")
-Loggy.e("Error message")
-Loggy.wtf("Fatal / unexpected message")
+// Codable pretty-print
+Loggy.d(users, format: .codable)
 
-// Optional: pretty-print Codable payloads (model-style, quoted strings)
-Loggy.d(someCodableModel, format: .codable)
-Loggy.d("UserListViewModel -> Fetched new users: \(users)", format: .codable)
-
-// Optional: pretty-print JSON payloads (raw JSON strings or Codable values)
-Loggy.i(jsonString, format: .json)
+// JSON pretty-print
 Loggy.i("Received API response: \(jsonString)", format: .json)
+Loggy.i(jsonString, format: .json)
 ```
 
-### Sugar Facade: `Log`
-
-If you prefer a shorter, you can use:
-
-```swift
-Log.v("Verbose message")
-Log.d("Debug message")
-Log.i("Info message")
-Log.w("Warning message")
-Log.e("Error message")
-Log.wtf("Fatal / unexpected message")
-```
-
-All of these delegate to the corresponding `Loggy` methods.
-
-### Protocol: `Loggable`
-
-`Loggable` is an opt-in marker that unlocks the instance helpers (`logD`, `logI`, etc.). Adopting it is as easy as declaring conformance on your class or struct—no additional requirements.
-
-### Formatting Options
-
-- `format: .plain` (default): renders the message as-is, wrapping long lines to the configured width.
-- `format: .codable`: pretty-prints `Codable` values (or interpolated strings containing them) in a Swift-like model layout with two-space indentation and quoted strings.
-- `format: .json`: pretty-prints JSON strings or encodable values as canonical JSON with two-space indentation.
-
-#### Output `.codable` format:
-
-```swift
-import Loggy
-
-class YourClass {
-
-    func anyMethod() {
-        // Log a list with the type of Codable model `User`
-        Loggy.d(users, format: .codable)
-    }
-}
-```
-
-Example console output (`format: .codable`):
+Example `.codable` output:
 
 ```text
 +--------------------------------------------------------------------------------+
@@ -219,21 +142,7 @@ Example console output (`format: .codable`):
 +--------------------------------------------------------------------------------+
 ```
 
-#### Output `.json` format:
-
-```swift
-import Loggy
-
-class YourClass {
-
-    func anyMethod() {
-        // Log a JSON string with pretty format
-        Loggy.i("Received API response: \(jsonString)", format: .json)
-    }
-}
-```
-
-Example console output (`format: .json`):
+Example `.json` output:
 
 ```text
 +--------------------------------------------------------------------------------+
@@ -274,6 +183,117 @@ Example console output (`format: .json`):
 | }                                                                              |
 +--------------------------------------------------------------------------------+
 ```
+
+---
+
+### 3. SwiftUI View Logging
+
+Adopt `Loggable` on your SwiftUI view and call `.log()` to automatically log the view type, initializer signature, and parameter values:
+
+```swift
+import SwiftUI
+import Loggy
+
+struct ProfileCard: View, Loggable {
+    let name: String
+    let title: String
+    let isOnline: Bool
+    let favoriteQuote: String?
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(name)
+            Text(title)
+            Text(isOnline ? "Online" : "Offline")
+
+            if let favoriteQuote {
+                Text("“\(favoriteQuote)”")
+            }
+        }
+        .log(.debug) // Auto-logs type name, init signature, and parameter values
+    }
+}
+```
+
+Example output:
+
+```text
++--------------------------------------------------------------------------------+
+| Level:  DEBUG                                        Time: 2025-11-25 00:07:07 |
+| Class:  ProfileCard                                                            |
+| Method: init(name:title:isOnline:favoriteQuote)                                |
+| Line:   146                                                                    |
+| ------------------------------------------------------------------------------ |
+| ProfileCard(name: "Taylor", title: "iOS Engineer", isOnline: true,             |
+| favoriteQuote: "Shipping beats perfection.")                                   |
++--------------------------------------------------------------------------------+
+```
+
+---
+
+### 4. Run the Example App
+
+Want to see the tables in action quickly? Run the bundled example target:
+
+```bash
+swift run LoggyExample
+```
+
+This prints a series of mock log entries (using both `Loggy.*` and `Log.*`) so you can verify the console layout inside your terminal or Xcode console.
+
+---
+
+## API Overview
+
+### Basic API
+
+```swift
+Loggy.v("Verbose message")
+Loggy.d("Debug message")
+Loggy.i("Info message")
+Loggy.w("Warning message")
+Loggy.e("Error message")
+Loggy.wtf("Fatal / unexpected message")
+```
+
+Prefer a shorter name? Use the sugar facade; it delegates to `Loggy`:
+
+```swift
+Log.v("Verbose message")
+Log.d("Debug message")
+Log.i("Info message")
+Log.w("Warning message")
+Log.e("Error message")
+Log.wtf("Fatal / unexpected message")
+```
+
+### Enhanced Formatting
+
+- `format: .plain` (default): renders the message as-is, wrapping long lines to the configured width.
+- `format: .codable`: pretty-prints `Codable` values (or interpolated strings containing them) in a Swift-like model layout with two-space indentation and quoted strings.
+- `format: .json`: pretty-prints JSON strings or encodable values as canonical JSON with two-space indentation.
+
+See the Quick Start section above for sample outputs of `.codable` and `.json`.
+
+### SwiftUI View Logging
+
+Adopt `Loggable` on a SwiftUI view and use `.log` to capture type name, initializer signature, and parameter values, with an optional custom message:
+
+```swift
+struct DashboardCard: View, Loggable {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack { Text(title); Text(subtitle) }
+            .log(.info, "Rendering dashboard card")
+    }
+}
+```
+
+### Protocol: `Loggable`
+
+`Loggable` is an opt-in marker used by the SwiftUI `.log` view modifier. Adopt it on your views to log initialization with parameter values; no additional requirements.
 
 ---
 
