@@ -8,11 +8,11 @@
 
 import Foundation
 
-// MARK: - Internal Engine (`LogEngine`)
+// MARK: - Core Logging
 
 /// Internal helper that does the heavy lifting for all log statements.
 enum LogEngine {
-    
+
     /// Formats a message and renders the log table when DEBUG is enabled.
     /// - Parameters:
     ///   - message: Payload to log (String, Codable, JSON, etc.).
@@ -32,7 +32,7 @@ enum LogEngine {
         line: Int
     ) {
         #if DEBUG
-        let className = extractClassName(from: file)
+        let className = extractFileName(from: file)
         let timestamp = currentTimestamp()
         let body = formatMessage(message, format: format)
         
@@ -50,13 +50,26 @@ enum LogEngine {
         print(formattedTable)
         #endif
     }
-    
+
     /// Extracts the filename (sans extension) from a file path.
-    private static func extractClassName(from file: String) -> String {
+    private static func extractFileName(from file: String) -> String {
         let filename = (file as NSString).lastPathComponent
         return (filename as NSString).deletingPathExtension
     }
     
+    /// Returns a timestamp string for the current date/time in the given time zone.
+    private static func currentTimestamp(timeZone: TimeZone = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        formatter.timeZone = timeZone
+        return formatter.string(from: Date())
+    }
+}
+
+// MARK: - Message Formatting
+
+extension LogEngine {
+
     /// Formats the message body according to the selected `LogFormat`.
     private static func formatMessage(_ message: Any, format: LogFormat) -> String {
         switch format {
@@ -82,7 +95,7 @@ enum LogEngine {
                 return prettyDescription(String(describing: message))
         }
     }
-
+    
     /// Adds line breaks and two-space indentation to Swift-style descriptions.
     private static func prettyDescription(_ text: String) -> String {
         var result = ""
@@ -125,7 +138,12 @@ enum LogEngine {
         
         return result
     }
-    
+}
+
+// MARK: - Codable / Model Rendering
+
+extension LogEngine {
+
     /// Encodes arbitrary values to JSON and renders them as a Swift-style model.
     private static func prettyModel(from value: Any) -> String? {
         let encoder = JSONEncoder()
@@ -146,7 +164,7 @@ enum LogEngine {
             return nil
         }
     }
-
+    
     /// Renders JSON objects/arrays into a Swift-like model string with indentation.
     private static func renderModelStyle(_ value: Any, indentLevel: Int = 0, typeName: String? = nil) -> String {
         let indentUnit = "  "
@@ -188,6 +206,11 @@ enum LogEngine {
                 return String(describing: value)
         }
     }
+}
+
+// MARK: - JSON Pretty Printing
+
+extension LogEngine {
 
     /// Pretty-prints JSON from strings or Encodable values.
     private static func prettyJSON(from value: Any) -> String? {
@@ -228,12 +251,120 @@ enum LogEngine {
 
         return String(decoding: prettyData, as: UTF8.self)
     }
+}
 
-    /// Returns a timestamp string for the current date/time in the given time zone.
-    private static func currentTimestamp(timeZone: TimeZone = .current) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        formatter.timeZone = timeZone
-        return formatter.string(from: Date())
+// MARK: - Reflection Helpers (SwiftUI View Logging)
+
+extension LogEngine {
+    
+    /// Extracts the actual struct or class name from an instance using reflection
+    ///
+    /// Uses Swift's Mirror API to get the actual type name, not the file name.
+    /// This ensures correct naming for nested types and private structs.
+    ///
+    /// - Parameter instance: The instance to inspect
+    /// - Returns: The actual type name (e.g., "CustomView")
+    static func extractTypeName<T>(from instance: T) -> String {
+        let mirror = Mirror(reflecting: instance)
+        
+        // Get the full type description
+        let fullTypeName = String(describing: mirror.subjectType)
+        
+        // Remove generic parameters and module prefix if present
+        // "MyModule.MyStruct<T>" -> "MyStruct"
+        let components = fullTypeName.split(separator: ".")
+        let typeName = components.last ?? Substring(fullTypeName)
+        
+        // Remove generic parameters
+        if let genericIndex = typeName.firstIndex(of: "<") {
+            return String(typeName[..<genericIndex])
+        }
+        
+        return String(typeName)
+    }
+    
+    /// Extracts constructor signature from a struct or class instance using reflection
+    ///
+    /// Uses Swift's Mirror API to inspect the instance's properties and generate
+    /// a constructor signature in the format: `init(param1:param2:param3:)`
+    ///
+    /// - Parameter instance: The instance to inspect
+    /// - Returns: Constructor signature string (e.g., "init(name:role:)")
+    static func extractConstructorSignature<T>(from instance: T) -> String {
+        let parameters = extractParameters(from: instance)
+        
+        guard !parameters.isEmpty else { return "init()" }
+        
+        // Format as init(param1:param2:param3:)
+        let signature = parameters.map(\.label).joined(separator: ":")
+        return "init(\(signature))"
+    }
+    
+    /// Generates an initialization message with actual parameter values
+    ///
+    /// Uses Swift's Mirror API to extract property names and their values,
+    /// formatting them as a struct initialization: `StructName(param1: "value1", param2: "values2")`
+    ///
+    /// - Parameter instance: The instance to inspect
+    /// - Returns: Formatted initialization message with actual values
+    static func constructMessage<T>(from instance: T) -> String {
+        let typeName = extractTypeName(from: instance)
+        let parameters = extractParameters(from: instance)
+        
+        guard !parameters.isEmpty else { return "\(typeName)()" }
+        
+        // Format as StructName(param1: "value1", param2: "values2")
+        let arguments = parameters
+            .map { "\($0.label): \($0.formattedValue)" }
+            .joined(separator: ", ")
+        
+        return "\(typeName)(\(arguments))"
+    }
+    
+    /// Extracts parameters from a struct or class instance using reflection
+    ///
+    /// Uses Swift's Mirror API to inspect the instance's stored properties,
+    /// filtering out SwiftUI internal properties (those starting with underscore).
+    ///
+    /// - Parameter instance: The instance to inspect
+    /// - Returns: Array of Parameter structs containing labels and values
+    private static func extractParameters<T>(from instance: T) -> [Parameter] {
+        let mirror = Mirror(reflecting: instance)
+        
+        return mirror.children.compactMap { child -> Parameter? in
+            guard let label = child.label else { return nil }
+            
+            // Filter out SwiftUI internal properties that start with underscore
+            guard !label.hasPrefix("_") else { return nil }
+            return Parameter(label: label, value: child.value)
+        }
+    }
+}
+
+/// Helper struct to represent a parameter extracted from reflection
+private struct Parameter {
+    let label: String
+    let value: Any
+    
+    /// formats the value as a string representation
+    var formattedValue: String {
+        if let stringValue = value as? String {
+            return "\"\(stringValue)\""
+        } else if let optionalValue = value as? (any OptionalProtocol), optionalValue.isNil {
+            return "nil"
+        } else {
+            return "\(value)"
+        }
+    }
+}
+
+/// Protocol to detact nil values in optional types during reflection
+fileprivate protocol OptionalProtocol {
+    var isNil: Bool { get }
+}
+
+extension Optional: OptionalProtocol {
+    fileprivate var isNil: Bool {
+        self == nil
     }
 }
